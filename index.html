@@ -50,7 +50,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
             letter-spacing: 2px;
         }
 
@@ -257,7 +256,6 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
         .info-card:hover {
@@ -481,7 +479,6 @@
             <button class="mode-btn" onclick="switchMode('track')">🔍 TRACK LOCATION</button>
         </div>
 
-        <!-- Share Location Section -->
         <div id="shareSection" class="section active">
             <div class="card">
                 <h2>📤 SHARE YOUR LOCATION</h2>
@@ -538,7 +535,6 @@
             </div>
         </div>
 
-        <!-- Track Location Section -->
         <div id="trackSection" class="section">
             <div class="card">
                 <h2>🔍 TRACK LOCATION</h2>
@@ -621,7 +617,7 @@
             }
             
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&loading=async`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
             script.async = true;
             script.defer = true;
             script.onload = () => {
@@ -639,8 +635,7 @@
         loadGoogleMaps();
 
         function initializeSocket() {
-            console.log('🔌 Connecting to:', BACKEND_URL);
-            
+            console.log('🔌 Connecting...');
             socket = io(BACKEND_URL, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,
@@ -649,29 +644,28 @@
             });
 
             socket.on('connect', () => {
-                console.log('✅ Connected to backend');
+                console.log('✅ Connected');
                 updateConnectionStatus(true);
             });
 
             socket.on('disconnect', () => {
-                console.log('❌ Disconnected from backend');
+                console.log('❌ Disconnected');
                 updateConnectionStatus(false);
             });
 
             socket.on('location_update', (data) => {
                 if (isTracking && data.sessionId === currentSessionId) {
-                    console.log('📍 Received location update:', data);
                     updateTrackLocation(data.location);
                 }
             });
 
             socket.on('error', (error) => {
-                console.error('❌ Socket error:', error);
+                console.error('Error:', error);
                 showStatus('shareStatus', `Error: ${error}`, 'error');
             });
 
             socket.on('connect_error', (error) => {
-                console.error('❌ Connection error:', error);
+                console.error('Connection error:', error);
                 updateConnectionStatus(false);
             });
         }
@@ -705,12 +699,10 @@
         function copyTrackingId() {
             const id = document.getElementById('generatedId').textContent;
             navigator.clipboard.writeText(id).then(() => {
-                showStatus('shareStatus', '✓ Session ID copied!', 'success');
+                showStatus('shareStatus', '✓ Copied!', 'success');
                 setTimeout(() => {
                     document.getElementById('shareStatus').innerHTML = '';
                 }, 3000);
-            }).catch(() => {
-                showStatus('shareStatus', '✗ Failed to copy', 'error');
             });
         }
 
@@ -721,35 +713,26 @@
             }
 
             if (!socket || !socket.connected) {
-                showStatus('shareStatus', '✗ Not connected to server', 'error');
+                showStatus('shareStatus', '✗ Not connected', 'error');
                 return;
             }
 
             if (!mapsLoaded) {
-                showStatus('shareStatus', '✗ Google Maps loading...', 'warning');
+                showStatus('shareStatus', '✗ Loading maps...', 'warning');
                 return;
             }
 
             try {
-                console.log('📝 Creating new session...');
-                
                 const response = await fetch(`${BACKEND_URL}/api/sessions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        deviceInfo: navigator.userAgent,
-                        appVersion: '1.0.0'
-                    })
+                    body: JSON.stringify({ deviceInfo: navigator.userAgent })
                 });
 
                 const data = await response.json();
-                
-                if (!data.success || !data.sessionId) {
-                    throw new Error('Failed to create session');
-                }
+                if (!data.success) throw new Error('Session creation failed');
 
                 sessionId = data.sessionId;
-                console.log('✅ Session created:', sessionId);
 
                 document.getElementById('generatedId').textContent = sessionId;
                 document.getElementById('trackingIdDisplay').style.display = 'block';
@@ -763,30 +746,10 @@
                 if (!shareMap) {
                     shareMap = new google.maps.Map(mapDiv, {
                         zoom: 15,
-                        center: { lat: 0, lng: 0 },
+                        center: { lat: 20.5937, lng: 78.9629 },
                         mapTypeControl: true,
                         streetViewControl: false,
-                        fullscreenControl: true,
-                        styles: [
-                            { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-                            { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-                            { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-                            { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
-                            { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9080' }] },
-                            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
-                            { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
-                            { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-                            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
-                            { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
-                            { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3751ff' }] },
-                            { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
-                            { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
-                            { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
-                            { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
-                        ]
+                        fullscreenControl: true
                     });
 
                     shareMarker = new google.maps.Marker({
@@ -819,19 +782,13 @@
                         updateShareLocation(position);
                     },
                     (error) => {
-                        console.error('❌ GPS Error:', error);
                         showStatus('shareStatus', `✗ GPS Error: ${error.message}`, 'error');
                     },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 30000,
-                        maximumAge: 1000
-                    }
+                    { enableHighAccuracy: true, timeout: 30000, maximumAge: 1000 }
                 );
 
                 showStatus('shareStatus', '✓ Sharing location...', 'success');
             } catch (error) {
-                console.error('❌ Error:', error);
                 showStatus('shareStatus', `✗ Error: ${error.message}`, 'error');
             }
         }
@@ -839,33 +796,16 @@
         function updateShareLocation(position) {
             const { latitude, longitude, altitude, speed, accuracy, heading } = position.coords;
             
-            if (accuracy > MAX_ACCURACY) {
-                console.warn('⚠️ Ignoring inaccurate location (accuracy: ' + accuracy.toFixed(1) + 'm)');
-                return;
-            }
+            if (accuracy > MAX_ACCURACY) return;
             
             if (lastValidLocation) {
-                const distance = calculateDistance(
-                    lastValidLocation.lat,
-                    lastValidLocation.lng,
-                    latitude,
-                    longitude
-                );
+                const dist = calculateDistance(lastValidLocation.lat, lastValidLocation.lng, latitude, longitude);
                 const timeDiff = (position.timestamp - lastValidLocation.timestamp) / 1000;
-                const calculatedSpeed = distance / timeDiff;
-                
-                if (calculatedSpeed > MAX_SPEED) {
-                    console.warn('⚠️ Ignoring GPS jump');
-                    return;
-                }
+                if (timeDiff > 0 && (dist / timeDiff) > MAX_SPEED) return;
             }
             
             updateCount++;
-            lastValidLocation = {
-                lat: latitude,
-                lng: longitude,
-                timestamp: position.timestamp
-            };
+            lastValidLocation = { lat: latitude, lng: longitude, timestamp: position.timestamp };
             
             document.getElementById('shareLat').textContent = latitude.toFixed(6);
             document.getElementById('shareLng').textContent = longitude.toFixed(6);
@@ -877,99 +817,56 @@
             const location = { lat: latitude, lng: longitude };
             shareMarker.setPosition(location);
             shareMap.setCenter(location);
-            
             sharePath.push(location);
             sharePolyline.setPath(sharePath);
 
             fetch(`${BACKEND_URL}/api/locations`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sessionId: sessionId,
-                    latitude,
-                    longitude,
-                    altitude: altitude || 0,
-                    speed: speed || 0,
-                    accuracy,
-                    heading: heading || 0
-                })
-            }).catch(e => console.error('Error sending location:', e));
+                body: JSON.stringify({ sessionId, latitude, longitude, altitude: altitude || 0, speed: speed || 0, accuracy, heading: heading || 0 })
+            }).catch(e => console.error('Error:', e));
         }
 
         async function stopSharing() {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
-
+            if (watchId) navigator.geolocation.clearWatch(watchId);
             if (sessionId) {
                 try {
-                    await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/end`, {
-                        method: 'PUT'
-                    });
-                } catch (error) {
-                    console.error('Error ending session:', error);
-                }
+                    await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/end`, { method: 'PUT' });
+                } catch (e) {}
             }
-
             isSharing = false;
             document.getElementById('startSharingBtn').style.display = 'block';
             document.getElementById('stopSharingBtn').style.display = 'none';
-            showStatus('shareStatus', '⏸️ Sharing stopped', 'warning');
+            showStatus('shareStatus', '⏸️ Stopped', 'warning');
         }
 
         async function startTracking() {
             const inputId = document.getElementById('trackingIdInput').value.trim();
-            
             if (!inputId) {
-                showStatus('trackStatus', '✗ Please enter a session ID', 'error');
+                showStatus('trackStatus', '✗ Enter session ID', 'error');
                 return;
             }
-
             if (!socket || !socket.connected) {
-                showStatus('trackStatus', '✗ Not connected to server', 'error');
+                showStatus('trackStatus', '✗ Not connected', 'error');
                 return;
             }
-
             if (!mapsLoaded) {
-                showStatus('trackStatus', '✗ Google Maps loading...', 'warning');
+                showStatus('trackStatus', '✗ Loading maps...', 'warning');
                 return;
             }
 
             try {
                 currentSessionId = inputId;
-                console.log('🎯 Starting tracking for:', inputId);
-
                 const mapDiv = document.getElementById('trackMap');
                 mapDiv.style.display = 'block';
                 
                 if (!trackMap) {
                     trackMap = new google.maps.Map(mapDiv, {
                         zoom: 15,
-                        center: { lat: 0, lng: 0 },
+                        center: { lat: 20.5937, lng: 78.9629 },
                         mapTypeControl: true,
                         streetViewControl: false,
-                        fullscreenControl: true,
-                        styles: [
-                            { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-                            { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-                            { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-                            { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#263c3f' }] },
-                            { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#6b9080' }] },
-                            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#38414e' }] },
-                            { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#212a37' }] },
-                            { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
-                            { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#746855' }] },
-                            { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#1f2835' }] },
-                            { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#f3751ff' }] },
-                            { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2f3948' }] },
-                            { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d59563' }] },
-                            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#17263c' }] },
-                            { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#515c6d' }] },
-                            { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] }
-                        ]
+                        fullscreenControl: true
                     });
 
                     trackMarker = new google.maps.Marker({
@@ -1001,28 +898,21 @@
                 totalDistance = 0;
                 
                 await loadLocationHistory(inputId);
-                
                 showStatus('trackStatus', '✓ Tracking active...', 'info');
             } catch (error) {
-                console.error('❌ Error:', error);
                 showStatus('trackStatus', `✗ Error: ${error.message}`, 'error');
             }
         }
 
         async function loadLocationHistory(sessionId) {
             try {
-                console.log('📥 Loading location history...');
                 const response = await fetch(`${BACKEND_URL}/api/sessions/${sessionId}/locations?limit=100`);
                 const data = await response.json();
-                
                 if (data.success && data.locations && data.locations.length > 0) {
-                    console.log(`✅ Loaded ${data.locations.length} points`);
-                    data.locations.forEach(loc => {
-                        updateTrackLocation(loc, false);
-                    });
+                    data.locations.forEach(loc => updateTrackLocation(loc, false));
                 }
             } catch (error) {
-                console.error('❌ Error loading history:', error);
+                console.error('Error loading history:', error);
             }
         }
 
@@ -1054,27 +944,23 @@
             trackPolyline.setPath(trackPath);
         }
 
+        function stopTracking() {
+            isTracking = false;
+            currentSessionId = null;
+            document.getElementById('startTrackingBtn').style.display = 'block';
+            document.getElementById('stopTrackingBtn').style.display = 'none';
+            showStatus('trackStatus', '⏸️ Stopped', 'warning');
+        }
+
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371e3;
             const φ1 = lat1 * Math.PI / 180;
             const φ2 = lat2 * Math.PI / 180;
             const Δφ = (lat2 - lat1) * Math.PI / 180;
             const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
             return R * c;
-        }
-
-        function stopTracking() {
-            isTracking = false;
-            currentSessionId = null;
-            document.getElementById('startTrackingBtn').style.display = 'block';
-            document.getElementById('stopTrackingBtn').style.display = 'none';
-            showStatus('trackStatus', '⏸️ Tracking stopped', 'warning');
         }
 
         function showStatus(elementId, message, type) {
